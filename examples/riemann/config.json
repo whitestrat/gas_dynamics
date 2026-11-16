@@ -1,0 +1,28 @@
+{
+    "type": "riemann_problem",
+    "path": ".",
+    "mesh": "mesh.csv",
+    "states": {
+        "left": {
+            "density": 1.0,
+            "velocity": 0.0,
+            "pressure": 1.0
+        },
+        "right": {
+            "density": 0.125,
+            "velocity": 0.0,
+            "pressure": 0.1
+        }
+    },
+    "time": {
+        "t_end": 0.1,
+        "N": 100
+    },
+    "modules": {
+        "solver": "exact",
+        "eos": "ideal",
+        "eos_params": {
+            "gamma": 1.4
+        }
+    }
+}
