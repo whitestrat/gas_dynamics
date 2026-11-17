@@ -1,20 +1,43 @@
-# GasDynamics — prac15, задание 1
+Программа решает одномерную задачу Римана для идеального газа. Параметры задаются
+в JSON. Расчёт выполняется на C++, результаты сохраняются в CSV, графики строятся
+с помощью Python. В комплект входят пять тестов Торо.
 
-Точный решатель одномерной задачи Римана для идеального газа. Проект работает
-в Linux. Python записывает параметры в JSON и запускает C++-задачу. Задача
-обращается к независимому решателю и сохраняет CSV, по которым Python строит графики.
+## 1. Установка необходимого
 
-## Подготовка Ubuntu
+Команды ниже рассчитаны на Ubuntu 22.04 и новее. В Windows их нужно выполнять
+в терминале Ubuntu через WSL.
 
-Нужны компилятор C++17, CMake ≥ 3.21, Ninja, Python ≥ 3.9, NumPy и Matplotlib.
-Для Ubuntu 22.04 и новее:
+Установите инструменты сборки и Python:
 
 ```bash
 sudo apt update
 sudo apt install build-essential cmake ninja-build python3 python3-venv python3-pip
 ```
 
-Дальнейшие команды выполняются из корня распакованного каталога `gas_dynamics`:
+Первая команда обновляет список пакетов. Вторая устанавливает:
+
+- `build-essential` — компилятор C++ и основные инструменты сборки;
+- `cmake` — программу, которая подготавливает сборку;
+- `ninja-build` — программу, которая выполняет команды сборки;
+- `python3` — Python;
+- `python3-venv` и `python3-pip` — средства установки модулей Python в отдельное окружение.
+
+Нужны C++17, CMake не ниже 3.21 и Python не ниже 3.9. Посмотреть версии:
+
+```bash
+g++ --version
+cmake --version
+python3 --version
+```
+
+Перейдите в каталог проекта. Например, если он находится в `~/project/gas_dynamics`:
+
+```bash
+cd ~/project/gas_dynamics
+```
+
+Здесь и далее команды выполняются из каталога, в котором лежит `CMakeLists.txt`.
+Создайте окружение Python и установите модули:
 
 ```bash
 python3 -m venv .venv
@@ -22,80 +45,172 @@ source .venv/bin/activate
 python -m pip install -r requirements.txt
 ```
 
-В новом терминале снова активируйте окружение. JSON-парсер nlohmann/json 3.11.3
-включён в `third_party/nlohmann` вместе с лицензией MIT. Во время сборки
-скачивать зависимости не требуется.
+Первая команда создаёт окружение `.venv`, вторая включает его, третья устанавливает
+NumPy для работы с массивами и Matplotlib для графиков.
 
-## Сборка
+В новом терминале снова перейдите в каталог проекта и выполните:
+
+```bash
+source .venv/bin/activate
+```
+
+Библиотека для чтения JSON уже находится в `third_party/nlohmann`.
+Отдельно устанавливать её не нужно.
+
+## 2. Сборка
+
+Сначала подготовьте сборку, указав Python из созданного окружения:
 
 ```bash
 cmake --preset release -DPython3_EXECUTABLE="$VIRTUAL_ENV/bin/python"
-cmake --build --preset release
 ```
 
-Исполняемый файл: `build/release/bin/riemann_problem`.
-Для отладочной сборки замените `release` на `debug` в обеих командах.
-После изменения исходников достаточно повторить команду сборки.
+Затем соберите программу:
 
-## Пять тестов Торо и результаты задания
+```bash
+cmake --build --preset release --parallel
+```
+
+`release` — режим с оптимизацией. `--parallel` позволяет компилировать несколько
+файлов одновременно. Готовая программа находится в `build/release/bin/riemann_problem`.
+
+После изменения исходников достаточно повторить вторую команду. Если менялись
+настройки CMake или окружение Python, сначала повторите первую.
+
+Для отладки есть отдельный режим `debug`:
+
+```bash
+cmake --preset debug -DPython3_EXECUTABLE="$VIRTUAL_ENV/bin/python"
+cmake --build --preset debug --parallel
+```
+
+Он сохраняет данные для отладчика и создаёт программу в `build/debug/bin`.
+Сборки `release` и `debug` хранятся отдельно.
+
+Проверьте решатель на пяти тестах Торо:
 
 ```bash
 ctest --preset release
-cmake --build build/release --target plots
 ```
 
-CTest запускает один набор `riemann.toro`, содержащий ровно пять обязательных
-случаев Торо. Сравниваются `p_star`, `u_star`, `rho_star_left`, `rho_star_right`
-с табличными значениями; ошибка даёт ненулевой код завершения.
-`ctest --preset release -V` показывает результаты всех пяти проверок.
-CSV проверки находятся в `build/release/Testing/toro`.
-
-Цель `plots` сначала рассчитывает эти пять задач в `results/toro`, затем сохраняет:
-
-- `results/toro/comparison.csv` — значения и эталоны, абсолютные и относительные
-  ошибки, допуски, типы/скорости волн, оценку GUESSP и число итераций Ньютона;
-- `results/toro/test_1` … `test_5` — конфигурации и CSV расчётов;
-- `results/toro/test_N/plots` — восемь отдельных рисунков: профили плотности,
-  скорости, давления, внутренней энергии, скорости звука, энтропийной функции,
-  диаграммы `xt.png` и `pu.png`.
-
-На профиль приходится 1001 точка, сохраняется 101 временной слой. На x–t показаны
-поле плотности, ударные волны, контакт, границы и пять внутренних лучей каждого
-веера. На p–u сплошные ветви соответствуют ударным волнам, штриховые — разрежению;
-в тестах 3–5 давление имеет логарифмическую шкалу.
-`entropy` — функция `s=p/rho^gamma`, а не размерная энтропия.
-
-Запуск пяти тестов напрямую:
+CTest показывает одну проверку `riemann.toro`, внутри которой выполняются все пять
+тестов. Подробный вывод можно посмотреть так:
 
 ```bash
-python scripts/run_toro.py --bin-dir build/release/bin --output results/toro
+ctest --preset release -V
 ```
 
-Входные состояния, моменты вывода и округлённые эталоны находятся в
-`examples/riemann/toro_cases.csv`. Абсолютные допуски учитывают округление эталонов.
-Для нулевого эталона относительная ошибка не определена: ячейка пуста, проверяется
-абсолютный допуск. Сам Ньютон останавливается при относительном изменении давления
-меньше `1e-6`; предел — 100 итераций.
+Сравниваются давление, скорость и две плотности в промежуточных состояниях.
+Результаты проверки находятся в `build/release/Testing/toro`.
+Для отладочной сборки замените `release` на `debug`.
 
-## Отдельный расчёт
+Если проверки временно не нужны, их можно отключить при настройке:
 
-Подготовленная конфигурация использует относительный путь к соседней сетке:
+```bash
+cmake --preset release -DBUILD_TESTING=OFF
+```
+
+Для включения используйте ту же команду с `-DBUILD_TESTING=ON`.
+Расчёты и построение графиков доступны в обоих случаях.
+
+## 3. Работа с программой
+
+### Пять тестов Торо и все графики
+
+```bash
+cmake --build --preset release --target plots
+```
+
+Команда собирает программу, рассчитывает пять тестов и строит по восемь графиков
+для каждого.
+Результаты появляются в `results/toro`:
+
+| Путь | Что находится внутри |
+| `comparison.csv` | Расчётные и табличные значения, ошибки, параметры волн и итераций |
+| `test_1` … `test_5` | Параметры и результаты каждого теста |
+| `test_N/plots` | Графики для соответствующего теста |
+
+Для каждого теста сохраняются профили плотности, скорости, давления, внутренней
+энергии, скорости звука и энтропийной функции, а также диаграммы x–t и p–u.
+
+На диаграмме p–u шкала давления становится логарифмической, если отношение
+максимального положительного давления кривой к минимальному больше 100.
+
+Если нужны только расчёты и таблицы:
+
+```bash
+cmake --build --preset release --target export_toro
+```
+
+Если расчёты уже выполнены и нужно только заново построить графики:
+
+```bash
+python scripts/plot_results.py results/toro
+```
+
+Начальные состояния, моменты вывода и табличные значения пяти тестов находятся
+в `examples/riemann/toro_cases.csv`.
+
+### Отдельный расчёт
+
+В `examples/riemann/config.json` находится готовый пример. Запустите его:
 
 ```bash
 ./build/release/bin/riemann_problem examples/riemann/config.json
+```
+
+Программа прочитает параметры и запишет результаты рядом с `config.json`.
+Для построения графиков выполните:
+
+```bash
 python scripts/plot_results.py examples/riemann
 ```
 
-CSV записываются рядом с переданным `config.json`. Повторный запуск обновляет
-результаты этого расчёта. Рисунки сохраняются в его подкаталоге `plots`.
-Графическое окружение рабочего стола не требуется.
+Изображения появятся в `examples/riemann/plots`. 
 
-Параметры можно задавать из Python через существующие классы проекта:
+Основные параметры в JSON:
+
+| Поле | Значение |
+| `states.left`, `states.right` | Начальные состояния слева и справа |
+| `density`, `velocity`, `pressure` | Плотность, скорость и давление |
+| `time.t_end` | Время окончания расчёта |
+| `time.N` | Число сохранённых слоёв, включая начальный и последний |
+| `mesh` | Путь к CSV с координатами |
+| `modules.eos_params.gamma` | Показатель адиабаты |
+
+Сейчас используются `type="riemann_problem"`, `solver="exact"` и `eos="ideal"`.
+Плотности и давления должны быть положительными. Решение с вакуумом пока не
+поддерживается: программа сообщит об ошибке.
+
+Сетка содержит колонку `x` и не менее 1000 строго возрастающих координат.
+Начальный разрыв расположен посередине между крайними координатами.
+Относительный путь к сетке считается от каталога с JSON.
+
+Чтобы сохранить собственную постановку отдельно, скопируйте пример вместе с сеткой:
+
+```bash
+mkdir -p results/my_case
+cp examples/riemann/config.json examples/riemann/mesh.csv results/my_case/
+```
+
+Измените `results/my_case/config.json`, затем запустите:
+
+```bash
+./build/release/bin/riemann_problem results/my_case/config.json
+python scripts/plot_results.py results/my_case
+```
+
+Повторный запуск обновляет результаты в этом каталоге.
+
+### Запуск из Python
+
+Классы `RiemannProblem` и `Calculation` позволяют задавать параметры из Python.
+Этот пример выполняется из корня проекта:
 
 ```python
 import sys
-from pathlib import Path
-sys.path.insert(0, str(Path("python").resolve()))
+sys.path.insert(0, "python")
+
 from calculation import Calculation
 from riemann_problem import RiemannProblem
 
@@ -107,228 +222,48 @@ task = RiemannProblem(
     },
     time={"t_end": 0.25, "N": 101},
 )
-calc = Calculation("results/my_case", task)
+
+calc = Calculation("results/python_case", task)
 calc.run(bin_dir="build/release/bin")
-print(calc.load("p_star")[0])
+density = calc.load("density")
 ```
 
-Затем: `python scripts/plot_results.py results/my_case`.
-`Calculation.open("results/my_case")` открывает сохранённый расчёт без повторного
-запуска C++; `calc.load("density")` возвращает массив `(N, число точек)`.
-
-JSON содержит `type`, `mesh`, `states`, `time`, `modules`. Поддерживаются
-`type="riemann_problem"`, `solver="exact"`, `eos="ideal"`; стандартное `gamma=1.4`.
-`time.N` — число слоёв, включая нулевой и последний, `time.t_end` — последний момент.
-Сетка — CSV с одной колонкой `x` и не менее 1000 строго возрастающих координат.
-Разрыв расположен посередине между крайними координатами сетки.
-Относительный путь `mesh` считается от каталога конфигурации. Python сохраняет
-`path` как метаданные; каталог вывода определяется расположением JSON.
-Плотности и давления должны быть положительными. Вакуум и несходимость дают
-сообщение об ошибке и ненулевой код завершения; решение с вакуумом не строится.
-
-## Структура
-
-Сохранено разделение прежнего проекта на задачи, решатели и Python-обработку.
-Заготовки будущих подсистем и дополнительные проверочные программы удалены.
-
-| Путь | Назначение |
-|---|---|
-| `CMakeLists.txt` | Общая конфигурация, подключение решателя, задачи и CTest |
-| `CMakePresets.json` | Сборки и запуск тестов `release` / `debug` |
-| `include/riemann_exact.hpp` | Независимый header-only решатель: `solve`, `sample`, параметры и потоки |
-| `src/tasks/riemann/main.cpp` | JSON и сетка, вызов решателя, экспорт CSV |
-| `src/tasks/riemann/CMakeLists.txt` | Цели `riemann_problem`, `export_toro`, `plots` |
-| `python/calculation.py` | Запись конфигурации, выбор/запуск C++-задачи, чтение CSV |
-| `python/riemann_problem.py` | Параметры задачи Римана |
-| `python/graph/` | Общий стиль, профили и диаграммы x–t / p–u |
-| `scripts/run_toro.py` | Пять тестов и сводная таблица |
-| `scripts/plot_results.py` | Сохранение восьми графиков каждого расчёта |
-| `tests/CMakeLists.txt` | Регистрация пяти случаев как одного набора CTest |
-| `examples/riemann/` | Рабочие `config.json`, `mesh.csv`, таблица пяти тестов |
-| `third_party/nlohmann/` | Используемый JSON-парсер и лицензия |
-| `results/` | Создаваемые расчёты; исходно только `.gitkeep` |
-| `requirements.txt` | Зависимости Python |
-| `.gitignore` | Исключения для сборки, результатов, локального окружения |
-
-Родительские каталоги `src/tools`, `scripts/cluster`, `docs` сохранены пустыми;
-используемых файлов для них в задании 1 нет. Новая задача получает подкаталог в
-`src/tasks`, подключение в общем CMake, Python-класс и запись в `TASK_MODULES`.
-Решатели подключаются к задачам через CMake-цели; файлового ввода внутри решателя нет.
-
-| Результат | Содержимое |
-|---|---|
-| `c.csv` | Одна строка констант: звёздные состояния, GUESSP, скорости волн, состояние и потоки при `S=0` |
-| `f_x.csv` | Координаты `x` и независимо параметризованные давлением кривые p–u |
-| `f_t.csv` | Времена и координаты фронтов/лучей |
-| `f_xt/0000.csv`, … | Шесть физических величин в узлах сетки каждого слоя |
-
-В `c.csv`: `guess_type` равен 0 для `linear`, 1 для `two_rarefactions`, 2 для
-`two_shocks`; `left_is_shock` / `right_is_shock` равны 1 для ударной волны и 0 для
-разрежения. Записываются только скорости существующих волн. Потоки `mass_flux`,
-`momentum_flux`, `energy_flux` вычисляются как `F(W(S=0))`.
-
----
-
-# English
-
-## GasDynamics — prac15, task 1
-
-Exact one-dimensional Riemann solver for an ideal gas, intended for Linux.
-Python writes JSON parameters and launches a C++ task. The task calls the independent
-solver and saves CSV; Python plots those CSV files.
-
-## Ubuntu setup
-
-Requirements: a C++17 compiler, CMake ≥ 3.21, Ninja, Python ≥ 3.9, NumPy and Matplotlib.
-On Ubuntu 22.04 or newer:
-
-```bash
-sudo apt update
-sudo apt install build-essential cmake ninja-build python3 python3-venv python3-pip
-```
-
-Run subsequent commands from the extracted `gas_dynamics` project root:
-
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-python -m pip install -r requirements.txt
-```
-
-Activate the environment again in each new terminal. nlohmann/json 3.11.3 is bundled
-in `third_party/nlohmann` with its MIT license. Building needs no dependency downloads.
-
-## Build
-
-```bash
-cmake --preset release -DPython3_EXECUTABLE="$VIRTUAL_ENV/bin/python"
-cmake --build --preset release
-```
-
-Executable: `build/release/bin/riemann_problem`. Replace `release` with `debug` in both
-commands for a debug build. After editing sources, repeat the build command.
-
-## Five Toro tests and required results
-
-```bash
-ctest --preset release
-cmake --build build/release --target plots
-```
-
-CTest runs one suite, `riemann.toro`, containing exactly the five required Toro cases.
-It compares `p_star`, `u_star`, `rho_star_left`, `rho_star_right` against reference values
-and exits with a nonzero status on failure. `ctest --preset release -V` shows all five
-checks. Their CSV output is under `build/release/Testing/toro`.
-
-The `plots` target first computes these cases in `results/toro`, then saves:
-
-- `results/toro/comparison.csv`: computed/reference values, absolute and relative errors,
-  tolerances, wave types/speeds, GUESSP initialization and Newton iterations;
-- `results/toro/test_1` … `test_5`: configurations and calculation CSV;
-- `results/toro/test_N/plots`: eight separate figures — density, velocity, pressure,
-  internal energy, sound speed and entropy-function profiles, `xt.png` and `pu.png`.
-
-Each profile uses 1001 points; 101 time layers are saved. The x–t diagram contains the
-density field, shocks, contact, fan boundaries and five interior rays per fan. In p–u,
-solid branches denote shocks and dashed branches denote rarefactions; tests 3–5 use a
-logarithmic pressure axis. `entropy` denotes `s=p/rho^gamma`, not dimensional entropy.
-
-Run the five tests directly:
-
-```bash
-python scripts/run_toro.py --bin-dir build/release/bin --output results/toro
-```
-
-`examples/riemann/toro_cases.csv` stores input states, output times and rounded reference
-values. Absolute tolerances account for reference rounding. Relative error is undefined
-for a zero reference: the cell is empty and the absolute tolerance is checked. Newton
-itself stops when relative pressure change is below `1e-6`, with at most 100 iterations.
-
-## Individual calculation
-
-The supplied configuration uses a relative path to the adjacent mesh:
-
-```bash
-./build/release/bin/riemann_problem examples/riemann/config.json
-python scripts/plot_results.py examples/riemann
-```
-
-CSV is written next to the specified `config.json`. Rerunning updates that calculation's
-results. Figures are saved in its `plots` subdirectory; a graphical desktop is not needed.
-
-Set parameters from Python using the existing project classes:
+`density` — массив: строки соответствуют моментам времени, столбцы — точкам сетки.
+Готовый расчёт можно прочитать без повторного запуска:
 
 ```python
-import sys
-from pathlib import Path
-sys.path.insert(0, str(Path("python").resolve()))
-from calculation import Calculation
-from riemann_problem import RiemannProblem
-
-task = RiemannProblem(
-    mesh="examples/riemann/mesh.csv",
-    states={
-        "left": {"density": 1.0, "velocity": 0.0, "pressure": 1.0},
-        "right": {"density": 0.125, "velocity": 0.0, "pressure": 0.1},
-    },
-    time={"t_end": 0.25, "N": 101},
-)
-calc = Calculation("results/my_case", task)
-calc.run(bin_dir="build/release/bin")
-print(calc.load("p_star")[0])
+calc = Calculation.open("results/python_case")
+pressure = calc.load("pressure")
 ```
 
-Then run `python scripts/plot_results.py results/my_case`.
-`Calculation.open("results/my_case")` loads a saved calculation without rerunning C++;
-`calc.load("density")` returns an array with shape `(N, number_of_points)`.
+### Файлы результатов
 
-JSON fields are `type`, `mesh`, `states`, `time`, `modules`. Supported selections are
-`type="riemann_problem"`, `solver="exact"`, `eos="ideal"`; the standard `gamma` is 1.4.
-`time.N` counts layers including the initial and final ones; `time.t_end` is the final time.
-The mesh is a single-column CSV headed `x`, with at least 1000 strictly increasing
-coordinates. The initial discontinuity is midway between the mesh endpoints. Relative
-mesh paths are resolved against the configuration directory. Python stores `path` as
-metadata; the JSON location determines the output directory. Densities and pressures
-must be positive. Vacuum and nonconvergence produce an error and nonzero exit status;
-vacuum solutions are not constructed.
+| Файл | Содержимое |
+| `config.json` | Параметры расчёта |
+| `c.csv` | Промежуточные состояния, скорости волн и потоки при `S=0` |
+| `f_x.csv` | Координаты и данные для диаграммы p–u |
+| `f_t.csv` | Времена и положения волн |
+| `f_xt/0000.csv`, … | Плотность, скорость, давление и другие величины на каждом временном слое |
+| `plots/` | Сохранённые изображения |
 
-## Structure
+### Каталоги проекта
 
-The previous separation into tasks, solvers and Python processing is preserved. Future
-subsystem placeholders and additional verification programs have been removed.
+| Каталог | Назначение |
+| `include/` | Решатели, подключаемые к задачам |
+| `src/tasks/` | Расчётные задачи на C++ |
+| `python/` | Подготовка параметров, запуск и чтение результатов |
+| `python/graph/` | Функции построения графиков |
+| `scripts/` | Готовые команды расчёта и обработки |
+| `tests/` | Подключение тестов к CTest |
+| `examples/` | Примеры параметров, сетка и таблица тестов |
+| `third_party/` | Сторонние библиотеки |
+| `results/` | Результаты расчётов |
+| `build/` | Программы и служебные файлы сборки; создаётся автоматически |
+| `.venv/` | Окружение Python; создаётся при установке |
 
-| Path | Purpose |
-|---|---|
-| `CMakeLists.txt` | Overall configuration, solver/task linkage and CTest |
-| `CMakePresets.json` | `release` / `debug` build and test presets |
-| `include/riemann_exact.hpp` | Independent header-only solver: `solve`, `sample`, properties and fluxes |
-| `src/tasks/riemann/main.cpp` | Read JSON/mesh, call solver, export CSV |
-| `src/tasks/riemann/CMakeLists.txt` | `riemann_problem`, `export_toro`, `plots` targets |
-| `python/calculation.py` | Write configuration, select/run C++ task, load CSV |
-| `python/riemann_problem.py` | Riemann problem parameters |
-| `python/graph/` | Shared style, profiles, x–t and p–u diagrams |
-| `scripts/run_toro.py` | Run the five tests and write the comparison table |
-| `scripts/plot_results.py` | Save eight figures per calculation |
-| `tests/CMakeLists.txt` | Register the five cases as one CTest suite |
-| `examples/riemann/` | Working configuration, mesh and five-case table |
-| `third_party/nlohmann/` | The JSON parser used by the task and its license |
-| `results/` | Generated calculations; initially only `.gitkeep` |
-| `requirements.txt` | Python dependencies |
-| `.gitignore` | Exclude build output, results and local environment |
+Пустые `src/tools`, `scripts/cluster` и `docs` оставлены для инструментов,
+кластерных сценариев и документации, которые будут реализованы в следующих версиях программы.
 
-The parent directories `src/tools`, `scripts/cluster`, `docs` remain empty: task 1 has
-no active files for them. A new task gets a subdirectory in `src/tasks`, a connection in
-the root CMake file, a Python class and an entry in `TASK_MODULES`. Solvers are linked
-to tasks through CMake targets; solver code has no file I/O.
+Корневой `CMakeLists.txt` задаёт общие настройки и подключает задачи.
+`CMakePresets.json` хранит режимы `release` и `debug`.
 
-| Output | Contents |
-|---|---|
-| `c.csv` | One row of constants: star states, GUESSP, wave speeds, state and fluxes at `S=0` |
-| `f_x.csv` | Mesh coordinates `x` and independently pressure-parametrized p–u curves |
-| `f_t.csv` | Times and front/ray coordinates |
-| `f_xt/0000.csv`, … | Six physical quantities at mesh points for each time layer |
-
-In `c.csv`, `guess_type` is 0 for `linear`, 1 for `two_rarefactions`, 2 for `two_shocks`.
-`left_is_shock` / `right_is_shock` are 1 for a shock and 0 for a rarefaction. Only speeds
-of existing waves are exported. `mass_flux`, `momentum_flux`, `energy_flux` are computed
-as `F(W(S=0))`.
