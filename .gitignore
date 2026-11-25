@@ -1,0 +1,180 @@
+# ------------------------------------------------------------
+# 1. C++ / CMake
+# ------------------------------------------------------------
+
+# Директории сборки
+/build/
+/build-*/
+/cmake-build-*/
+/out/
+
+# Генерируемые файлы CMake
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+CTestTestfile.cmake
+DartConfiguration.tcl
+Testing/
+_deps/
+compile_commands.json
+install_manifest.txt
+CMakeUserPresets.json
+
+# Объектные файлы
+*.o
+*.obj
+*.lo
+
+# Статические библиотеки
+*.a
+*.lib
+
+# Динамические библиотеки
+*.so
+*.so.*
+*.dylib
+*.dll
+
+# Исполняемые файлы
+*.exe
+*.app/
+
+# Отладочная информация
+*.pdb
+*.ilk
+*.dSYM/
+
+# Файлы покрытия кода
+*.gcda
+*.gcno
+*.gcov
+*.profraw
+*.profdata
+
+
+# ------------------------------------------------------------
+# 2. Python
+# ------------------------------------------------------------
+
+# Кэш Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Виртуальные окружения
+.venv/
+venv/
+env/
+ENV/
+
+# Сборка Python-пакетов
+dist/
+*.egg
+*.egg-info/
+pip-wheel-metadata/
+
+# Кэш инструментов разработки
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.pyright/
+.tox/
+.nox/
+
+# Покрытие тестами
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+nosetests.xml
+junit.xml
+
+
+# ------------------------------------------------------------
+# 3. Jupyter Notebook
+# ------------------------------------------------------------
+
+.ipynb_checkpoints/
+.jupyter/
+
+
+# ------------------------------------------------------------
+# 4. Результаты расчётов
+# ------------------------------------------------------------
+
+# Директории для пользовательских расчётов
+/sandbox/
+/runs/
+/results/
+/calculations/
+
+# Автоматически созданные результаты внутри examples
+/examples/**/c.csv
+/examples/**/f_x.csv
+/examples/**/f_t.csv
+/examples/**/f_xt/
+
+
+# ------------------------------------------------------------
+# 5. Логи и временные файлы
+# ------------------------------------------------------------
+
+*.log
+*.tmp
+*.temp
+*.bak
+*.swp
+*.swo
+*~
+.cache/
+logs/
+
+
+# ------------------------------------------------------------
+# 6. Среды разработки
+# ------------------------------------------------------------
+
+# Visual Studio Code
+.vscode/
+
+# JetBrains: CLion, PyCharm
+.idea/
+*.iml
+
+# Visual Studio
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+
+# ------------------------------------------------------------
+# 7. Настройки окружения и локальные конфигурации
+# ------------------------------------------------------------
+
+.env
+.env.*
+!.env.example
+.local/
+
+
+# ------------------------------------------------------------
+# 8. Файлы операционных систем
+# ------------------------------------------------------------
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+Desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+.directory
+.Trash-*/
